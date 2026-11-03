@@ -9,30 +9,34 @@
 *{box-sizing:border-box}
 body{margin:0;background:#07151a;color:white;font-family:Arial;text-align:center}
 header{padding:12px;background:linear-gradient(90deg,#087b39,#d9bd00)}
-h1{margin:0;font-size:38px}
+h1{margin:0;font-size:34px}
 #hud{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;padding:9px}
 .stat{background:#193039;padding:9px 13px;border-radius:9px;border:1px solid #4c7778}
 #gameWrap{position:relative;width:min(900px,98vw);margin:auto}
 #game{width:100%;height:auto;border:3px solid #d8c51c;border-radius:12px;background:#111;display:block}
-#miniMap{
- position:absolute;top:12px;right:12px;
- width:190px;height:135px;
- border:2px solid #e6d21b;border-radius:9px;
- background:#07151a;z-index:3;
- pointer-events:none;
-}
-button{padding:12px 18px;margin:5px;border:0;border-radius:9px;background:#e6d21b;font-weight:bold;cursor:pointer}
-button:hover{filter:brightness(1.12)}
-#pauseButton{background:#e6d21b}
+#miniMap{position:absolute;top:12px;right:12px;width:175px;height:125px;border:2px solid #e6d21b;border-radius:9px;background:#07151a;z-index:3}
+button{padding:12px 16px;margin:5px;border:0;border-radius:9px;background:#e6d21b;font-weight:bold;cursor:pointer}
+button:hover{filter:brightness(1.15)}
 #message{color:#ffe75d;min-height:28px;font-weight:bold;padding:8px}
 #overlay{position:fixed;inset:0;background:#000d;display:flex;align-items:center;justify-content:center;padding:15px;z-index:10}
-.box{background:#19343a;border:2px solid #e6d21b;border-radius:17px;padding:24px;width:min(460px,95vw)}
+.box{background:#19343a;border:2px solid #e6d21b;border-radius:17px;padding:22px;width:min(460px,95vw);max-height:90vh;overflow:auto}
 .hidden{display:none!important}
 select{padding:10px;width:90%;border-radius:8px}
 .small{font-size:13px;color:#bcd1d1}
-@media(max-width:550px){
- #miniMap{width:125px;height:90px}
-}
+#minigame{margin:15px 0}
+.gameItem{font-size:28px;padding:13px;background:#294c54;border:2px solid white;border-radius:10px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:12px 0}
+.wire{display:block;width:100%;padding:12px 3px;border-radius:8px;color:white;font-weight:bold}
+.wire.red{background:#d93645}
+.wire.blue{background:#287ed4}
+.wire.green{background:#219d58}
+.wire.yellow{background:#c6a500;color:#111}
+#meter{height:28px;background:#263b40;border-radius:8px;overflow:hidden;margin:20px 0}
+#meterZone{height:100%;width:25%;margin-left:38%;background:#25d56b;position:relative}
+#meterPointer{width:5px;height:40px;background:white;position:relative;top:-34px;left:0}
+#rubbish{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.trash{font-size:30px;background:#294c54;padding:12px;border-radius:10px}
+@media(max-width:550px){#miniMap{width:120px;height:86px}}
 </style>
 </head>
 <body>
@@ -55,9 +59,8 @@ select{padding:10px;width:90%;border-radius:8px}
 </div>
 
 <button id="pauseButton" onclick="togglePause()">⏸️ PAUSE</button>
-
 <div id="message">Welcome to Brazil! 🇧🇷</div>
-<p class="small">WASD / Arrow keys: move · E: task · R: report · Q: emergency meeting · SPACE: kick ball · P: pause</p>
+<p class="small">WASD / Arrows: move · E: task · R: report · Q: meeting · SPACE: kick · P: pause</p>
 
 <div id="overlay">
  <div class="box" id="start">
@@ -82,15 +85,15 @@ select{padding:10px;width:90%;border-radius:8px}
 
  <div class="box hidden" id="meeting">
   <h2 id="meetingTitle">🚨 MEETING!</h2>
-  <p id="meetingText">Who is suspicious?</p>
+  <p id="meetingText"></p>
   <div id="votes"></div>
  </div>
 
  <div class="box hidden" id="taskBox">
   <h2 id="taskTitle">TASK</h2>
   <p id="taskDescription"></p>
-  <button onclick="finishTask()">COMPLETE TASK</button>
-  <button onclick="closeTask()">CANCEL</button>
+  <div id="minigame"></div>
+  <button onclick="closeTask()">CANCEL TASK</button>
  </div>
 
  <div class="box hidden" id="pauseBox">
@@ -107,25 +110,22 @@ select{padding:10px;width:90%;border-radius:8px}
 </div>
 
 <script>
-const canvas=document.getElementById("game");
-const ctx=canvas.getContext("2d");
-const mini=document.getElementById("miniMap");
-const mctx=mini.getContext("2d");
-const $=id=>document.getElementById(id);
+const canvas=$("game"),ctx=canvas.getContext("2d");
+const mini=$("miniMap"),mctx=mini.getContext("2d");
+function $(id){return document.getElementById(id)}
 
-const TILE=40;
-const COLS=35,ROWS=25;
-const MAPW=COLS*TILE,MAPH=ROWS*TILE;
-const VIEW=235;
-
+const TILE=40,COLS=35,ROWS=25;
+const MAPW=COLS*TILE,MAPH=ROWS*TILE,VIEW=235;
 const names=["Neymar Jr.","Pelé","Anitta","Ronaldinho","Vinícius Jr.","Richarlison","Rebeca Andrade"];
 const colors=["#20c65a","#ed445b","#398af0","#e9b92c","#ad65e9","#ef8234","#21c9bd"];
 const taskNames=["Fix the stadium lights","Sort the footballs","Repair the scoreboard","Clean the changing room","Charge the generator"];
 
 let map=[],players=[],me=null,tasks=[],bodies=[],keys={};
-let impostor=false,game=false,meeting=false,paused=false,completed=0,kills=0;
-let cooldown=0,emergencyUsed=false,activeTask=null,lastTime=0,hard=false;
-let ball=null,particles=[],camera={x:0,y:0};
+let impostor=false,game=false,meeting=false,paused=false;
+let completed=0,kills=0,cooldown=0,emergencyUsed=false;
+let activeTask=null,lastTime=0,hard=false,ball=null,particles=[];
+let camera={x:0,y:0};
+let miniState={};
 
 function wall(x,y){
  return x<0||y<0||x>=COLS||y>=ROWS||map[y][x]===1;
@@ -133,10 +133,8 @@ function wall(x,y){
 
 function buildMap(){
  map=Array.from({length:ROWS},()=>Array(COLS).fill(0));
-
  for(let x=0;x<COLS;x++){map[0][x]=1;map[ROWS-1][x]=1}
  for(let y=0;y<ROWS;y++){map[y][0]=1;map[y][COLS-1]=1}
-
  for(let x=3;x<32;x++){
   if(![7,8,17,18,26,27].includes(x))map[5][x]=1;
   if(![4,5,13,14,23,24,30].includes(x))map[11][x]=1;
@@ -160,8 +158,7 @@ function openPosition(){
 
 function makePlayer(id,name,color,isMe=false){
  let p=openPosition();
- return {id,name,color,x:p.x,y:p.y,alive:true,isMe,
-  isImpostor:false,angle:Math.random()*6.28,think:0};
+ return {id,name,color,x:p.x,y:p.y,alive:true,isMe,isImpostor:false,angle:Math.random()*6.28,think:0};
 }
 
 function startGame(){
@@ -169,10 +166,8 @@ function startGame(){
  players=[];
  me=makePlayer(0,$("character").value,"#20c65a",true);
  players.push(me);
-
  let others=names.filter(n=>n!==me.name);
  others.forEach((n,i)=>players.push(makePlayer(i+1,n,colors[i+1])));
-
  hard=$("difficulty").value==="hard";
  impostor=Math.random()<.25;
  if(impostor)me.isImpostor=true;
@@ -183,15 +178,12 @@ function startGame(){
   let p=openPosition();
   tasks.push({x:p.x,y:p.y,done:false,name:taskNames[i]});
  }
-
  bodies=[];particles=[];ball=null;
  completed=0;kills=0;cooldown=0;
  emergencyUsed=false;meeting=false;paused=false;game=true;
-
  $("pauseButton").textContent="⏸️ PAUSE";
  $("role").textContent=impostor?"🔴 IMPOSTOR":"🟢 CREWMATE";
  $("overlay").classList.add("hidden");
-
  say(impostor?"YOU ARE THE IMPOSTOR! ⚽":"You are a crewmate. Find the impostor!");
  updateHUD();
  lastTime=performance.now();
@@ -200,18 +192,15 @@ function startGame(){
 
 function togglePause(){
  if(!game||meeting)return;
-
- paused=!paused;
- keys={};
-
+ paused=!paused;keys={};
  if(paused){
   $("pauseButton").textContent="▶️ RESUME";
   openBox("pauseBox");
-  say("Game paused. Take a break!");
+  say("Game paused!");
  }else{
   $("pauseButton").textContent="⏸️ PAUSE";
   $("overlay").classList.add("hidden");
-  say("Game resumed! Boa sorte! 🇧🇷");
+  say("Game resumed! Boa sorte!");
   lastTime=performance.now();
  }
 }
@@ -222,8 +211,8 @@ function updateHUD(){
  $("kills").textContent=kills;
  $("cooldown").textContent=impostor?(cooldown>0?Math.ceil(cooldown)+"s":"READY"):"--";
 }
-
 function say(t){$("message").textContent=t}
+function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
 
 function canMove(x,y){
  let r=12;
@@ -235,13 +224,10 @@ function canMove(x,y){
 
 function move(p,dx,dy,dt){
  let speed=p.isMe?175:hard?110:85;
- let nx=p.x+dx*speed*dt;
- let ny=p.y+dy*speed*dt;
+ let nx=p.x+dx*speed*dt,ny=p.y+dy*speed*dt;
  if(canMove(nx,p.y))p.x=nx;
  if(canMove(p.x,ny))p.y=ny;
 }
-
-function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
 
 function updateAI(dt){
  players.slice(1).forEach(p=>{
@@ -249,19 +235,15 @@ function updateAI(dt){
   p.think-=dt;
   if(p.think<=0){
    p.think=Math.random()*1.5+.5;
-   let angle=Math.random()*Math.PI*2;
-   p.angle=angle;
-
+   p.angle=Math.random()*Math.PI*2;
    if(p.isImpostor&&!impostor){
     let target=players.filter(q=>q.alive&&q!==p)
-      .sort((a,b)=>distance(a,p)-distance(b,p))[0];
+     .sort((a,b)=>distance(a,p)-distance(b,p))[0];
     if(target&&distance(p,target)<160)
      p.angle=Math.atan2(target.y-p.y,target.x-p.x);
    }
   }
-
   move(p,Math.cos(p.angle),Math.sin(p.angle),dt);
-
   if(p.isImpostor&&!impostor){
    let target=players.find(q=>q===me&&q.alive&&distance(p,q)<35);
    if(target&&Math.random()<(hard?.025:.01))eliminate(target,p);
@@ -272,40 +254,31 @@ function updateAI(dt){
 function drawMap(){
  let sx=camera.x,sy=camera.y;
  ctx.fillStyle="#142b2b";ctx.fillRect(0,0,900,560);
-
  let left=Math.max(0,Math.floor(sx/TILE)-1);
  let right=Math.min(COLS,Math.ceil((sx+900)/TILE)+1);
  let top=Math.max(0,Math.floor(sy/TILE)-1);
  let bottom=Math.min(ROWS,Math.ceil((sy+560)/TILE)+1);
 
- for(let y=top;y<bottom;y++){
-  for(let x=left;x<right;x++){
-   let px=x*TILE-sx,py=y*TILE-sy;
-   if(map[y][x]){
-    ctx.fillStyle="#38535b";ctx.fillRect(px,py,TILE,TILE);
-    ctx.fillStyle="#52727a";ctx.fillRect(px+2,py+2,TILE-4,TILE-4);
-   }else{
-    ctx.fillStyle=(x+y)%2?"#24443e":"#284a43";
-    ctx.fillRect(px,py,TILE,TILE);
-    ctx.strokeStyle="#ffffff09";ctx.strokeRect(px,py,TILE,TILE);
-   }
+ for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){
+  let px=x*TILE-sx,py=y*TILE-sy;
+  if(map[y][x]){
+   ctx.fillStyle="#38535b";ctx.fillRect(px,py,TILE,TILE);
+   ctx.fillStyle="#52727a";ctx.fillRect(px+2,py+2,TILE-4,TILE-4);
+  }else{
+   ctx.fillStyle=(x+y)%2?"#24443e":"#284a43";
+   ctx.fillRect(px,py,TILE,TILE);
   }
  }
-
- ctx.font="bold 15px Arial";
- ctx.fillStyle="#ffffff77";
- [["LOCKER ROOM",2,2],["CONTROL ROOM",11,2],
-  ["STADIUM",19,2],["CAFETERIA",2,14],
-  ["TRAINING",11,14],["POWER ROOM",19,14]
+ ctx.font="bold 15px Arial";ctx.fillStyle="#ffffff77";
+ [["LOCKER ROOM",2,2],["CONTROL ROOM",11,2],["STADIUM",19,2],
+  ["CAFETERIA",2,14],["TRAINING",11,14],["POWER ROOM",19,14]
  ].forEach(a=>ctx.fillText(a[0],a[1]*TILE-sx,a[2]*TILE-sy));
 
  tasks.forEach(t=>{
   if(t.done)return;
   let x=t.x-sx,y=t.y-sy;
-  ctx.fillStyle="#f6d52b";
-  ctx.beginPath();ctx.arc(x,y,10,0,7);ctx.fill();
-  ctx.fillStyle="#17251b";ctx.font="bold 14px Arial";
-  ctx.fillText("!",x-3,y+5);
+  ctx.fillStyle="#f6d52b";ctx.beginPath();ctx.arc(x,y,10,0,7);ctx.fill();
+  ctx.fillStyle="#17251b";ctx.font="bold 14px Arial";ctx.fillText("!",x-3,y+5);
  });
 }
 
@@ -313,154 +286,215 @@ function drawPlayer(p){
  if(!p.alive)return;
  let x=p.x-camera.x,y=p.y-camera.y;
  ctx.save();ctx.translate(x,y);
- ctx.fillStyle="#0007";
- ctx.beginPath();ctx.ellipse(0,13,15,6,0,0,7);ctx.fill();
- ctx.fillStyle=p.color;
- ctx.beginPath();ctx.roundRect(-12,-15,24,29,9);ctx.fill();
- ctx.fillStyle="#a9e7f1";
- ctx.beginPath();ctx.roundRect(-9,-11,19,10,5);ctx.fill();
+ ctx.fillStyle="#0007";ctx.beginPath();ctx.ellipse(0,13,15,6,0,0,7);ctx.fill();
+ ctx.fillStyle=p.color;ctx.beginPath();ctx.roundRect(-12,-15,24,29,9);ctx.fill();
+ ctx.fillStyle="#a9e7f1";ctx.beginPath();ctx.roundRect(-9,-11,19,10,5);ctx.fill();
  ctx.fillStyle="white";ctx.font="10px Arial";ctx.textAlign="center";
  ctx.fillText(p.name.split(" ")[0],0,26);
- if(p===me){
-  ctx.strokeStyle="#fff";ctx.lineWidth=2;
-  ctx.beginPath();ctx.arc(0,0,18,0,7);ctx.stroke();
- }
+ if(p===me){ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,18,0,7);ctx.stroke()}
  ctx.restore();
 }
 
-// NEW: Draw the minimap
 function drawMiniMap(){
- const w=mini.width,h=mini.height;
- const sx=w/MAPW,sy=h/MAPH;
-
- mctx.clearRect(0,0,w,h);
- mctx.fillStyle="#102622";
- mctx.fillRect(0,0,w,h);
-
- // Maze walls and floors
- for(let y=0;y<ROWS;y++){
-  for(let x=0;x<COLS;x++){
-   mctx.fillStyle=map[y][x]?"#71878c":"#294b3e";
-   mctx.fillRect(x*TILE*sx,y*TILE*sy,TILE*sx+.5,TILE*sy+.5);
-  }
+ let sx=mini.width/MAPW,sy=mini.height/MAPH;
+ mctx.clearRect(0,0,mini.width,mini.height);
+ mctx.fillStyle="#102622";mctx.fillRect(0,0,mini.width,mini.height);
+ for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+  mctx.fillStyle=map[y][x]?"#71878c":"#294b3e";
+  mctx.fillRect(x*TILE*sx,y*TILE*sy,TILE*sx+.5,TILE*sy+.5);
  }
-
- // Unfinished tasks
  tasks.forEach(t=>{
-  if(t.done)return;
-  mctx.fillStyle="#ffe32b";
-  mctx.beginPath();
-  mctx.arc(t.x*sx,t.y*sy,3.5,0,Math.PI*2);
-  mctx.fill();
+  if(!t.done){mctx.fillStyle="#ffe32b";mctx.beginPath();mctx.arc(t.x*sx,t.y*sy,3.5,0,7);mctx.fill()}
  });
-
- // Bodies
  bodies.forEach(b=>{
-  mctx.fillStyle="#ff263e";
-  mctx.beginPath();
-  mctx.arc(b.x*sx,b.y*sy,4,0,Math.PI*2);
-  mctx.fill();
+  mctx.fillStyle="#ff263e";mctx.beginPath();mctx.arc(b.x*sx,b.y*sy,4,0,7);mctx.fill();
  });
-
- // Other players
  players.forEach(p=>{
   if(!p.alive||p===me)return;
-  mctx.fillStyle=p.color;
-  mctx.beginPath();
-  mctx.arc(p.x*sx,p.y*sy,4,0,Math.PI*2);
-  mctx.fill();
+  mctx.fillStyle=p.color;mctx.beginPath();mctx.arc(p.x*sx,p.y*sy,4,0,7);mctx.fill();
  });
-
- // Your position
  if(me){
-  mctx.fillStyle="#ffffff";
-  mctx.beginPath();
-  mctx.arc(me.x*sx,me.y*sy,6,0,Math.PI*2);
-  mctx.fill();
-  mctx.strokeStyle="#20e75c";
-  mctx.lineWidth=2;
-  mctx.stroke();
+  mctx.fillStyle="white";mctx.beginPath();mctx.arc(me.x*sx,me.y*sy,6,0,7);mctx.fill();
+  mctx.strokeStyle="#20e75c";mctx.lineWidth=2;mctx.stroke();
  }
-
- // Minimap border
- mctx.strokeStyle="#ffffff88";
- mctx.lineWidth=2;
- mctx.strokeRect(1,1,w-2,h-2);
 }
 
 function draw(){
  if(!me)return;
-
  camera.x=Math.max(0,Math.min(MAPW-900,me.x-450));
  camera.y=Math.max(0,Math.min(MAPH-560,me.y-280));
-
  drawMap();
 
  bodies.forEach(b=>{
   if(distance(me,b)<VIEW){
-   ctx.fillStyle="#d72b38";
-   ctx.beginPath();ctx.arc(b.x-camera.x,b.y-camera.y,12,0,7);ctx.fill();
-   ctx.fillStyle="white";
-   ctx.fillText("!",b.x-camera.x-3,b.y-camera.y+4);
+   ctx.fillStyle="#d72b38";ctx.beginPath();ctx.arc(b.x-camera.x,b.y-camera.y,12,0,7);ctx.fill();
+   ctx.fillStyle="white";ctx.fillText("!",b.x-camera.x-3,b.y-camera.y+4);
   }
  });
+ players.forEach(p=>{if(p===me||distance(me,p)<VIEW)drawPlayer(p)});
+ if(ball){ctx.fillStyle="white";ctx.beginPath();ctx.arc(ball.x-camera.x,ball.y-camera.y,10,0,7);ctx.fill()}
+ particles.forEach(p=>{ctx.fillStyle=p.color;ctx.fillRect(p.x-camera.x,p.y-camera.y,5,5)});
 
- players.forEach(p=>{
-  if(p===me||distance(me,p)<VIEW)drawPlayer(p);
- });
-
- if(ball){
-  ctx.fillStyle="white";
-  ctx.beginPath();ctx.arc(ball.x-camera.x,ball.y-camera.y,10,0,7);ctx.fill();
-  ctx.strokeStyle="black";ctx.stroke();
- }
-
- particles.forEach(p=>{
-  ctx.fillStyle=p.color;
-  ctx.fillRect(p.x-camera.x,p.y-camera.y,5,5);
- });
-
- // Darkness around your character
  let x=me.x-camera.x,y=me.y-camera.y;
- ctx.save();
- ctx.fillStyle="#02070bdc";
- ctx.fillRect(0,0,900,560);
+ ctx.save();ctx.fillStyle="#02070bdc";ctx.fillRect(0,0,900,560);
  ctx.globalCompositeOperation="destination-out";
  let g=ctx.createRadialGradient(x,y,45,x,y,VIEW);
  g.addColorStop(0,"rgba(0,0,0,1)");
  g.addColorStop(.7,"rgba(0,0,0,.85)");
  g.addColorStop(1,"rgba(0,0,0,0)");
- ctx.fillStyle=g;
- ctx.beginPath();ctx.arc(x,y,VIEW,0,7);ctx.fill();
+ ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,VIEW,0,7);ctx.fill();
  ctx.restore();
-
  drawPlayer(me);
  drawMiniMap();
 }
 
+// TASK SYSTEM
 function tryTask(){
  if(impostor){say("Fake doing tasks! Don't get caught.");return}
  let t=tasks.find(t=>!t.done&&distance(me,t)<55);
  if(!t){say("Find a yellow task marker and get closer!");return}
  activeTask=t;
  $("taskTitle").textContent="📋 "+t.name;
- $("taskDescription").textContent="Complete this task to help the crew!";
+ $("minigame").innerHTML="";
  openBox("taskBox");
+
+ if(t.name==="Sort the footballs")startSorting();
+ else if(t.name==="Fix the stadium lights")startWires();
+ else if(t.name==="Repair the scoreboard")startScoreboard();
+ else if(t.name==="Clean the changing room")startCleaning();
+ else if(t.name==="Charge the generator")startGenerator();
 }
 
-function finishTask(){
+function taskSuccess(message){
  if(!activeTask)return;
- activeTask.done=true;activeTask=null;
+ let t=activeTask;
+ t.done=true;activeTask=null;
  completed++;
- players.filter(p=>!p.isMe&&!p.isImpostor&&p.alive)
-  .forEach(p=>{if(Math.random()<.35)completed=Math.min(5,completed+1)});
  $("overlay").classList.add("hidden");
- say("Task completed! Boa! 🇧🇷");
+ say(message+" Task completed! 🇧🇷");
  updateHUD();checkWin();
 }
 
+// 1. SORT FOOTBALLS
+function startSorting(){
+ $("taskDescription").textContent="⚽ Sort each football into its matching basket!";
+ let colours=["red","yellow","green"];
+ miniState.balls=Array.from({length:6},()=>colours[Math.floor(Math.random()*3)]);
+ miniState.selected=-1;
+ miniState.sorted=[];
+ renderBalls();
+}
+function renderBalls(){
+ let html="<p>Choose a football, then choose its basket.</p><p>Sorted: "+miniState.sorted.length+"/6</p><div class='grid'>";
+ miniState.balls.forEach((c,i)=>{
+  if(!miniState.sorted.includes(i))
+   html+=`<button class="gameItem" style="color:${c};border:3px solid ${miniState.selected===i?"white":"#456"}" onclick="selectBall(${i})">⚽</button>`;
+ });
+ html+="</div><p>Matching baskets:</p>";
+ ["red","yellow","green"].forEach(c=>{
+  html+=`<button style="background:${c};color:${c==="yellow"?"black":"white"}" onclick="basketBall('${c}')">${c.toUpperCase()}</button>`;
+ });
+ $("minigame").innerHTML=html;
+}
+function selectBall(i){miniState.selected=i;renderBalls()}
+function basketBall(c){
+ let i=miniState.selected;
+ if(i<0){say("Choose a football first!");return}
+ if(miniState.balls[i]!==c){say("Wrong basket! Try again.");return}
+ miniState.sorted.push(i);miniState.selected=-1;
+ if(miniState.sorted.length===6){taskSuccess("⚽ Perfect sorting!");return}
+ renderBalls();
+}
+
+// 2. CONNECT MATCHING WIRES
+function startWires(){
+ $("taskDescription").textContent="💡 Connect each wire to the matching colour!";
+ miniState.wireSelected=null;miniState.wireDone=[];
+ let colours=["red","blue","green","yellow"];
+ $("minigame").innerHTML="<p>Click a colour on the left, then its match on the right.</p><div style='display:grid;grid-template-columns:1fr 1fr;gap:12px' id='wireColumns'><div id='wireLeft'></div><div id='wireRight'></div></div>";
+ colours.forEach(c=>{
+  $("wireLeft").innerHTML+=`<button class="wire ${c}" onclick="chooseWire('${c}')">${c.toUpperCase()} ➜</button>`;
+  $("wireRight").innerHTML+=`<button class="wire ${c}" onclick="matchWire('${c}')">➜ ${c.toUpperCase()}</button>`;
+ });
+}
+function chooseWire(c){miniState.wireSelected=c;say("Now choose the matching wire on the right!")}
+function matchWire(c){
+ if(!miniState.wireSelected){say("Choose a wire on the left first!");return}
+ if(miniState.wireSelected!==c){say("That wire doesn't match!");return}
+ if(!miniState.wireDone.includes(c)){
+  miniState.wireDone.push(c);
+  say("Wire connected! "+miniState.wireDone.length+"/4");
+ }
+ miniState.wireSelected=null;
+ if(miniState.wireDone.length===4)taskSuccess("💡 Lights repaired!");
+}
+
+// 3. SCOREBOARD NUMBER PUZZLE
+function startScoreboard(){
+ let a=Math.floor(Math.random()*8)+2;
+ let b=Math.floor(Math.random()*8)+2;
+ miniState.answer=a+b;
+ $("taskDescription").textContent="📺 Repair the scoreboard by solving the sum!";
+ $("minigame").innerHTML=`<h1 style="font-size:45px">${a} + ${b} = ?</h1><p>Choose the correct answer:</p><div class="grid" id="answers"></div>`;
+ let options=[miniState.answer,miniState.answer+1,miniState.answer-1,miniState.answer+3];
+ options.sort(()=>Math.random()-.5);
+ options.forEach(n=>{
+  $("answers").innerHTML+=`<button class="gameItem" onclick="answerScore(${n})">${n}</button>`;
+ });
+}
+function answerScore(n){
+ if(n===miniState.answer)taskSuccess("📺 Scoreboard repaired!");
+ else say("Wrong number! Try again!");
+}
+
+// 4. CLEANING MINIGAME
+function startCleaning(){
+ miniState.trash=["🥤","🧻","🍌","🗑️","🧦","📦"];
+ $("taskDescription").textContent="🧹 Click all six pieces of rubbish to clean the room!";
+ renderTrash();
+}
+function renderTrash(){
+ $("minigame").innerHTML="<p>Put all the rubbish in the bin!</p><h2>🗑️ BIN</h2><div id='rubbish'></div><p>Cleaned: "+(6-miniState.trash.length)+"/6</p>";
+ miniState.trash.forEach((item,i)=>{
+  $("rubbish").innerHTML+=`<button class="trash" onclick="removeTrash(${i})">${item}</button>`;
+ });
+}
+function removeTrash(i){
+ miniState.trash.splice(i,1);
+ if(miniState.trash.length===0){taskSuccess("🧹 Room sparkling clean!");return}
+ renderTrash();
+}
+
+// 5. GENERATOR TIMING GAME
+function startGenerator(){
+ $("taskDescription").textContent="🔋 Stop the moving marker inside the green zone!";
+ miniState.meter=0;miniState.direction=1;miniState.running=true;
+ $("minigame").innerHTML="<p>Press STOP when the marker is in the green area!</p><div id='meter'><div id='meterZone'></div><div id='meterPointer'></div></div><button onclick='stopGenerator()'>🛑 STOP</button><p id='meterHint'>Watch the marker!</p>";
+ animateGenerator();
+}
+function animateGenerator(){
+ if(!activeTask||activeTask.name!=="Charge the generator"||!miniState.running)return;
+ miniState.meter+=miniState.direction*2.2;
+ if(miniState.meter>=100){miniState.meter=100;miniState.direction=-1}
+ if(miniState.meter<=0){miniState.meter=0;miniState.direction=1}
+ let pointer=$("meterPointer");
+ if(pointer)pointer.style.left=miniState.meter+"%";
+ miniState.animation=requestAnimationFrame(animateGenerator);
+}
+function stopGenerator(){
+ if(!miniState.running)return;
+ miniState.running=false;
+ cancelAnimationFrame(miniState.animation);
+ if(miniState.meter>=38&&miniState.meter<=63)taskSuccess("🔋 Generator charged!");
+ else{
+  $("meterHint").textContent="Not quite! Try again!";
+  setTimeout(()=>{if(activeTask&&activeTask.name==="Charge the generator")startGenerator()},650);
+ }
+}
+
 function closeTask(){
- activeTask=null;
+ if(miniState.animation)cancelAnimationFrame(miniState.animation);
+ miniState.running=false;activeTask=null;
  $("overlay").classList.add("hidden");
 }
 
@@ -476,16 +510,14 @@ function kickBall(){
   vy:(Math.random()-.5)*8,life:30,
   color:["#f5d52b","white","#16b84e"][i%3]
  });
- eliminate(target,me);
- cooldown=20;
+ eliminate(target,me);cooldown=20;
  say("⚽ GOOOOAL! You kicked "+target.name+"!");
  updateHUD();
 }
 
 function eliminate(target,attacker){
  if(!target||!target.alive)return;
- target.alive=false;
- bodies.push({x:target.x,y:target.y});
+ target.alive=false;bodies.push({x:target.x,y:target.y});
  if(attacker===me)kills++;
  updateHUD();
  if(target===me)endGame(false,"You were eliminated! Brazil needs you!");
@@ -494,150 +526,104 @@ function eliminate(target,attacker){
 function reportBody(){
  let b=bodies.find(b=>distance(me,b)<65);
  if(!b){say("Get closer to a body to report it!");return}
- bodies=[];
- startMeeting("🚨 BODY REPORTED!","Who do you think did it?");
+ bodies=[];startMeeting("🚨 BODY REPORTED!","Who do you think did it?");
 }
-
 function callMeeting(){
  if(emergencyUsed){say("You've already used your emergency meeting!");return}
  emergencyUsed=true;
  startMeeting("🚨 EMERGENCY MEETING!","Someone called a meeting. Who is suspicious?");
 }
-
 function startMeeting(title,description){
- meeting=true;
- $("meetingTitle").textContent=title;
- $("meetingText").textContent=description;
+ meeting=true;$("meetingTitle").textContent=title;$("meetingText").textContent=description;
  $("votes").innerHTML="";
-
  players.filter(p=>p.alive).forEach(p=>{
   let b=document.createElement("button");
-  b.textContent=p.name+(p===me?" (YOU)":"");
-  b.onclick=()=>vote(p);
+  b.textContent=p.name+(p===me?" (YOU)":"");b.onclick=()=>vote(p);
   $("votes").appendChild(b);
  });
-
- let skip=document.createElement("button");
- skip.textContent="SKIP";
- skip.onclick=()=>vote(null);
- $("votes").appendChild(skip);
+ let skip=document.createElement("button");skip.textContent="SKIP";
+ skip.onclick=()=>vote(null);$("votes").appendChild(skip);
  openBox("meeting");
 }
-
 function vote(choice){
- meeting=false;
- $("overlay").classList.add("hidden");
- let votes={};
- players.filter(p=>p.alive).forEach(p=>votes[p.id]=0);
+ meeting=false;$("overlay").classList.add("hidden");
+ let votes={};players.filter(p=>p.alive).forEach(p=>votes[p.id]=0);
  if(choice)votes[choice.id]++;
-
  players.filter(p=>p.alive&&!p.isMe).forEach(p=>{
   let target;
-  if(Math.random()<(hard?.65:.35))
-   target=players.find(q=>q.alive&&q.isImpostor);
+  if(Math.random()<(hard?.65:.35))target=players.find(q=>q.alive&&q.isImpostor);
   else{
    let possible=players.filter(q=>q.alive&&q!==p);
    target=possible[Math.floor(Math.random()*possible.length)];
   }
   if(target)votes[target.id]++;
  });
-
  let max=Math.max(...Object.values(votes));
  let leaders=Object.keys(votes).filter(id=>votes[id]===max);
  let ejected=leaders.length===1?players.find(p=>p.id===Number(leaders[0])):null;
-
  if(ejected){
   ejected.alive=false;
   say(ejected.isImpostor?"THE IMPOSTOR WAS CAUGHT! 🇧🇷":"Wrong person! An innocent player was ejected.");
   if(ejected.isImpostor){endGame(!impostor,"The impostor was voted out!");return}
  }else say("It was a tie. Nobody was ejected.");
-
  updateHUD();checkWin();
 }
-
 function checkWin(){
  if(!game)return;
  let alive=players.filter(p=>p.alive);
  let imp=alive.filter(p=>p.isImpostor);
  let crew=alive.filter(p=>!p.isImpostor);
-
  if(imp.length===0){endGame(!impostor,"All impostors have been found!");return}
  if(imp.length>=crew.length){endGame(impostor,"The impostor has taken over Brazil!");return}
- if(!impostor&&completed>=5){endGame(true,"All tasks completed! Brazil wins!");}
+ if(!impostor&&completed>=5)endGame(true,"All tasks completed! Brazil wins!");
 }
-
 function endGame(won,text){
  if(!game)return;
  game=false;meeting=false;paused=false;
  $("pauseButton").textContent="⏸️ PAUSE";
  $("endTitle").textContent=won?"🏆 VITÓRIA!":"💀 GAME OVER";
- $("endText").textContent=text;
- openBox("ending");
+ $("endText").textContent=text;openBox("ending");
 }
-
 function openBox(id){
  $("overlay").classList.remove("hidden");
- ["start","meeting","taskBox","pauseBox","ending"]
-  .forEach(x=>$(x).classList.add("hidden"));
+ ["start","meeting","taskBox","pauseBox","ending"].forEach(x=>$(x).classList.add("hidden"));
  $(id).classList.remove("hidden");
 }
 
 function loop(now){
  if(!game)return;
-
- let dt=Math.min((now-lastTime)/1000,.04);
- lastTime=now;
-
+ let dt=Math.min((now-lastTime)/1000,.04);lastTime=now;
  if(!meeting&&!paused){
   let dx=0,dy=0;
   if(keys.ArrowLeft||keys.a||keys.A)dx--;
   if(keys.ArrowRight||keys.d||keys.D)dx++;
   if(keys.ArrowUp||keys.w||keys.W)dy--;
   if(keys.ArrowDown||keys.s||keys.S)dy++;
-
-  if(dx||dy){
-   let len=Math.hypot(dx,dy);
-   move(me,dx/len,dy/len,dt);
-  }
-
+  if(dx||dy){let len=Math.hypot(dx,dy);move(me,dx/len,dy/len,dt)}
   updateAI(dt);
   cooldown=Math.max(0,cooldown-dt);
   particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--});
   particles=particles.filter(p=>p.life>0);
-  updateHUD();
-  checkWin();
+  updateHUD();checkWin();
  }
-
  draw();
  if(game)requestAnimationFrame(loop);
 }
 
 window.addEventListener("keydown",e=>{
  keys[e.key]=true;
-
- if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))
-  e.preventDefault();
-
+ if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();
  if(!game||meeting)return;
-
- if(e.key.toLowerCase()==="p"){
-  if(!paused)togglePause();
-  else togglePause();
-  return;
- }
-
+ if(e.key.toLowerCase()==="p"){togglePause();return}
  if(paused)return;
-
  if(e.key.toLowerCase()==="e")tryTask();
  if(e.key.toLowerCase()==="r")reportBody();
  if(e.key.toLowerCase()==="q")callMeeting();
  if(e.code==="Space"&&impostor)kickBall();
 });
-
 window.addEventListener("keyup",e=>keys[e.key]=false);
 
-buildMap();
-draw();
+buildMap();draw();
 </script>
 </body>
 </html>
