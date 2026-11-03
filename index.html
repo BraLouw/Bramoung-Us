@@ -1,392 +1,431 @@
-?variant="document" id="63821" title="Bramoung Us — Complete HTML Game"}
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Bramoung Us 🇧🇷</title>
 <style>
 *{box-sizing:border-box}
-body{margin:0;background:#07151a;color:white;font-family:Arial,sans-serif;text-align:center}
-header{padding:15px;background:linear-gradient(90deg,#087b39,#e6c900);color:#071b12}
-h1{margin:0;font-size:clamp(30px,6vw,55px);letter-spacing:2px}
-header p{margin:5px}
-#gameWrap{position:relative;width:min(960px,98vw);margin:12px auto}
-canvas{display:block;width:100%;background:#173d38;border:4px solid #e6c900;border-radius:12px}
-#hud{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:8px auto;width:min(960px,98vw)}
-.panel{background:#132a31;border:1px solid #39717a;border-radius:10px;padding:9px 13px}
-button{border:0;border-radius:9px;padding:11px 16px;font-weight:bold;cursor:pointer;background:#f3d51b;color:#16251c;margin:4px}
-button:hover{filter:brightness(1.15);transform:scale(1.03)}
-#overlay{position:absolute;inset:0;background:#061116ed;display:flex;align-items:center;justify-content:center;border-radius:12px;padding:15px}
-.box{max-width:520px;width:100%;background:#18343a;border:2px solid #e5d21b;border-radius:18px;padding:22px}
-.box h2{font-size:30px;margin:4px}
-.box p{line-height:1.5}
-#message{min-height:26px;color:#ffe96b;font-weight:bold;margin:8px}
-#meetingChoices{display:flex;flex-wrap:wrap;justify-content:center}
-.small{font-size:13px;color:#c8d9d6}
+body{margin:0;background:#07151a;color:white;font-family:Arial;text-align:center}
+header{padding:12px;background:linear-gradient(90deg,#087b39,#d9bd00)}
+h1{margin:0;font-size:38px}
+#hud{display:flex;justify-content:center;gap:9px;flex-wrap:wrap;padding:9px}
+.stat{background:#193039;padding:9px 13px;border-radius:9px;border:1px solid #4c7778}
+canvas{width:min(900px,98vw);height:auto;border:3px solid #d8c51c;border-radius:12px;background:#111;display:block;margin:auto}
+button{padding:12px 18px;margin:5px;border:0;border-radius:9px;background:#e6d21b;font-weight:bold;cursor:pointer}
+#message{color:#ffe75d;min-height:28px;font-weight:bold;padding:8px}
+#overlay{position:fixed;inset:0;background:#000d;display:flex;align-items:center;justify-content:center;padding:15px}
+.box{background:#19343a;border:2px solid #e6d21b;border-radius:17px;padding:24px;width:min(460px,95vw)}
 .hidden{display:none!important}
-.taskbar{height:13px;background:#293d40;border-radius:20px;overflow:hidden;margin-top:5px}
-#taskFill{height:100%;width:0;background:#36d878}
-.skin{font-size:35px;margin:5px}
+select{padding:10px;width:90%;border-radius:8px}
+.small{font-size:13px;color:#bcd1d1}
 </style>
 </head>
 <body>
 <header>
 <h1>🇧🇷 BRAMOUNG US ⚽</h1>
-<p>Trust nobody. Complete your tasks. Find the impostor!</p>
+<p>Find the impostor. Trust nobody.</p>
 </header>
 
 <div id="hud">
- <div class="panel">👤 <span id="role">Waiting</span></div>
- <div class="panel">👥 Alive: <span id="alive">0</span></div>
- <div class="panel">⚽ KOs: <span id="kills">0</span></div>
- <div class="panel">📋 Tasks: <span id="taskCount">0/0</span>
-  <div class="taskbar"><div id="taskFill"></div></div>
- </div>
+ <div class="stat">👤 <span id="role">Waiting</span></div>
+ <div class="stat">👥 <span id="alive">0</span> alive</div>
+ <div class="stat">📋 Tasks: <span id="tasks">0/5</span></div>
+ <div class="stat">⚽ Kills: <span id="kills">0</span></div>
+ <div class="stat">⏳ Kill: <span id="cooldown">--</span></div>
 </div>
 
-<div id="gameWrap">
-<canvas id="game" width="960" height="600"></canvas>
+<canvas id="game" width="900" height="560"></canvas>
+<div id="message">Welcome to Brazil! 🇧🇷</div>
+<p class="small">WASD / Arrow keys: move · E: task · R: report · Q: emergency meeting · SPACE: kick ball</p>
+
 <div id="overlay">
- <div class="box" id="menu">
-  <div class="skin">🇧🇷 ⚽ 🥅</div>
-  <h2>BRAMOUNG US</h2>
-  <p>A Brazilian social deduction game. Play as a crewmate or become the impostor!</p>
-  <p><b>Choose your character:</b></p>
-  <select id="character" style="padding:10px;border-radius:8px;width:90%;font-size:16px">
-   <option>Neymar Jr.</option>
-   <option>Pelé</option>
-   <option>Anitta</option>
-   <option>Ronaldinho</option>
-   <option>Vinícius Jr.</option>
-   <option>Ronaldo Fenômeno</option>
-   <option>Richarlison</option>
+ <div class="box" id="start">
+  <h1>BRAMOUNG US</h1>
+  <p>Welcome to the Brazilian spaceship!</p>
+  <p>Choose your character:</p>
+  <select id="character">
+   <option>Neymar Jr.</option><option>Pelé</option>
+   <option>Anitta</option><option>Ronaldinho</option>
+   <option>Vinícius Jr.</option><option>Richarlison</option>
    <option>Rebeca Andrade</option>
   </select>
-  <p><b>Game mode:</b></p>
-  <select id="mode" style="padding:10px;border-radius:8px;width:90%;font-size:16px">
-   <option value="normal">Normal — 1 impostor</option>
-   <option value="hard">Hard — smarter AI</option>
+  <p>Difficulty:</p>
+  <select id="difficulty">
+   <option value="normal">Normal</option>
+   <option value="hard">Hard</option>
   </select>
   <br><br>
-  <button onclick="startGame()">▶ START GAME</button>
-  <p class="small">WASD / Arrow keys = Move<br>E = Complete task · R = Report · Space = Impostor football kick</p>
+  <button onclick="startGame()">▶ PLAY GAME</button>
+  <p class="small">You can be a crewmate or the impostor!</p>
  </div>
  <div class="box hidden" id="meeting">
-  <h2 id="meetingTitle">🚨 EMERGENCY MEETING!</h2>
-  <p id="meetingText">Who do you think is the impostor?</p>
-  <div id="meetingChoices"></div>
-  <p class="small">Choose carefully. You cannot undo your vote!</p>
+  <h2 id="meetingTitle">🚨 MEETING!</h2>
+  <p id="meetingText">Who is suspicious?</p>
+  <div id="votes"></div>
  </div>
  <div class="box hidden" id="taskBox">
-  <h2 id="taskTitle">📋 TASK</h2>
-  <p id="taskDescription">Complete this task!</p>
-  <button onclick="finishTask()">✅ COMPLETE TASK</button>
+  <h2 id="taskTitle">TASK</h2>
+  <p id="taskDescription"></p>
+  <button onclick="finishTask()">COMPLETE TASK</button>
   <button onclick="closeTask()">CANCEL</button>
  </div>
- <div class="box hidden" id="endBox">
-  <h2 id="endTitle">GAME OVER</h2>
+ <div class="box hidden" id="ending">
+  <h1 id="endTitle"></h1>
   <p id="endText"></p>
-  <button onclick="startGame()">🔄 PLAY AGAIN</button>
+  <button onclick="startGame()">PLAY AGAIN</button>
  </div>
 </div>
-</div>
-
-<div id="message">Welcome to Brazil! Get ready...</div>
-<p class="small">Bramoung Us is a fan-made, browser-based game. Famous names are used as playful character themes.</p>
 
 <script>
 const canvas=document.getElementById("game");
 const ctx=canvas.getContext("2d");
 const $=id=>document.getElementById(id);
 
-const W=960,H=600;
-const names=["Neymar Jr.","Pelé","Anitta","Ronaldinho","Vinícius Jr.","Ronaldo Fenômeno","Richarlison","Rebeca Andrade"];
-const colours=["#16b84e","#e83d50","#3589ed","#edb72f","#a85ce6","#f47d28","#22c6bd","#f16cb6","#eeeeee"];
-const taskNames=["Fix the stadium lights","Sort the footballs","Clean the changing room","Repair the scoreboard","Deliver the match tickets","Charge the generator"];
-const rooms=[
- {x:35,y:35,w:260,h:180,n:"LOCKER ROOM",c:"#285b51"},
- {x:350,y:35,w:260,h:180,n:"CONTROL ROOM",c:"#31516b"},
- {x:665,y:35,w:260,h:180,n:"STADIUM",c:"#52663a"},
- {x:35,y:385,w:260,h:180,n:"CAFETERIA",c:"#72533a"},
- {x:350,y:385,w:260,h:180,n:"TRAINING ROOM",c:"#365e75"},
- {x:665,y:385,w:260,h:180,n:"POWER ROOM",c:"#695044"}
-];
-let players=[],me=null,game=false,paused=false,impostor=false;
-let keys={},bodies=[],tasks=[],completed=0,totalTasks=5,kills=0;
-let lastTime=0,meeting=false,activeTask=-1,hard=false;
-let ball=null,particles=[],toastTimer=0,emergencyUsed=false;
+const TILE=40;
+const COLS=35,ROWS=25;
+const MAPW=COLS*TILE,MAPH=ROWS*TILE;
+const VIEW=235;
+const names=["Neymar Jr.","Pelé","Anitta","Ronaldinho","Vinícius Jr.","Richarlison","Rebeca Andrade"];
+const colors=["#20c65a","#ed445b","#398af0","#e9b92c","#ad65e9","#ef8234","#21c9bd"];
+const taskNames=["Fix the stadium lights","Sort the footballs","Repair the scoreboard","Clean the changing room","Charge the generator"];
 
-function say(t){$("message").textContent=t;toastTimer=220}
-function random(a,b){return Math.random()*(b-a)+a}
-function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
-function randomPosition(){return {x:random(75,885),y:random(85,525)}}
-function show(id){["menu","meeting","taskBox","endBox"].forEach(x=>$(x).classList.add("hidden"));$("overlay").classList.remove("hidden");$(id).classList.remove("hidden")}
-function hideOverlay(){$("overlay").classList.add("hidden")}
+let map=[],players=[],me=null,tasks=[],bodies=[],keys={};
+let impostor=false,game=false,meeting=false,completed=0,kills=0;
+let cooldown=0,emergencyUsed=false,activeTask=null,lastTime=0,hard=false;
+let ball=null,particles=[],camera={x:0,y:0};
+
+function wall(x,y){
+ return x<0||y<0||x>=COLS||y>=ROWS||map[y][x]===1;
+}
+
+function buildMap(){
+ map=Array.from({length:ROWS},()=>Array(COLS).fill(0));
+
+ // Outer walls
+ for(let x=0;x<COLS;x++){map[0][x]=1;map[ROWS-1][x]=1}
+ for(let y=0;y<ROWS;y++){map[y][0]=1;map[y][COLS-1]=1}
+
+ // Maze walls, with gaps for corridors
+ for(let x=3;x<32;x++){
+  if(![7,8,17,18,26,27].includes(x))map[5][x]=1;
+  if(![4,5,13,14,23,24,30].includes(x))map[11][x]=1;
+  if(![6,7,16,17,25,26].includes(x))map[18][x]=1;
+ }
+ for(let y=2;y<23;y++){
+  if(![3,4,12,13,21,22].includes(y))map[y][9]=1;
+  if(![6,7,15,16].includes(y))map[y][17]=1;
+  if(![3,4,12,13,21,22].includes(y))map[y][26]=1;
+ }
+
+ // Room decorations
+}
+
+function openPosition(){
+ for(let i=0;i<1000;i++){
+  let x= Math.floor(Math.random()*(COLS-2))+1;
+  let y= Math.floor(Math.random()*(ROWS-2))+1;
+  if(!wall(x,y))return {x:x*TILE+20,y:y*TILE+20};
+ }
+ return {x:60,y:60};
+}
+
+function makePlayer(id,name,color,isMe=false){
+ let p=openPosition();
+ return {id,name,color,x:p.x,y:p.y,alive:true,isMe,
+  isImpostor:false,angle:Math.random()*6.28,think:0};
+}
 
 function startGame(){
- hard=$("mode").value==="hard";
- const chosen=$("character").value;
- const others=names.filter(n=>n!==chosen);
+ buildMap();
  players=[];
- me={id:0,name:chosen,x:480,y:300,vx:0,vy:0,color:"#16b84e",alive:true,isMe:true,taskDone:0};
+ me=makePlayer(0,$("character").value,"#20c65a",true);
  players.push(me);
- for(let i=0;i<7;i++){
-  let p=randomPosition();
-  players.push({id:i+1,name:others[i],x:p.x,y:p.y,color:colours[(i+1)%colours.length],alive:true,isMe:false,taskDone:0,angle:random(0,6.28),think:0});
- }
+ let others=names.filter(n=>n!==me.name);
+ others.forEach((n,i)=>players.push(makePlayer(i+1,n,colors[i+1])));
+ hard=$("difficulty").value==="hard";
  impostor=Math.random()<.25;
  if(impostor)me.isImpostor=true;
- else{
-  const candidates=players.slice(1);
-  candidates[Math.floor(Math.random()*candidates.length)].isImpostor=true;
+ else players[1+Math.floor(Math.random()*7)].isImpostor=true;
+
+ tasks=[];
+ for(let i=0;i<5;i++){
+  let p=openPosition();
+  tasks.push({x:p.x,y:p.y,done:false,name:taskNames[i]});
  }
- tasks=Array.from({length:totalTasks},(_,i)=>{
-  const r=rooms[(i+1)%rooms.length];
-  return {x:r.x+r.w/2,y:r.y+r.h/2,done:false,name:taskNames[i%taskNames.length]};
- });
- completed=0;kills=0;bodies=[];ball=null;particles=[];
- meeting=false;paused=false;emergencyUsed=false;game=true;
+ bodies=[];particles=[];ball=null;
+ completed=0;kills=0;cooldown=0;
+ emergencyUsed=false;meeting=false;game=true;
  $("role").textContent=impostor?"🔴 IMPOSTOR":"🟢 CREWMATE";
- $("kills").textContent="0";
- say(impostor?"YOU ARE THE IMPOSTOR! Pretend to do tasks...":"You are a crewmate. Find the impostor!");
+ $("overlay").classList.add("hidden");
+ say(impostor?"YOU ARE THE IMPOSTOR! ⚽":"You are a crewmate. Find the impostor!");
  updateHUD();
- hideOverlay();
  lastTime=performance.now();
  requestAnimationFrame(loop);
 }
 
 function updateHUD(){
  $("alive").textContent=players.filter(p=>p.alive).length;
- $("taskCount").textContent=completed+"/"+totalTasks;
- $("taskFill").style.width=(completed/totalTasks*100)+"%";
+ $("tasks").textContent=completed+"/5";
  $("kills").textContent=kills;
+ $("cooldown").textContent=impostor?(cooldown>0?Math.ceil(cooldown)+"s":"READY"):"--";
 }
 
-function drawRoom(r){
- ctx.fillStyle=r.c;ctx.fillRect(r.x,r.y,r.w,r.h);
- ctx.strokeStyle="#8cae8a";ctx.lineWidth=3;ctx.strokeRect(r.x,r.y,r.w,r.h);
- ctx.fillStyle="#ffffff22";ctx.fillRect(r.x+12,r.y+30,r.w-24,r.h-42);
- ctx.fillStyle="#fff";ctx.font="bold 14px Arial";ctx.fillText(r.n,r.x+13,r.y+20);
- // room decoration
- ctx.fillStyle="#e5d11c";
- for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(r.x+35+i*25,r.y+r.h-20,5,0,7);ctx.fill()}
+function say(t){$("message").textContent=t}
+
+function canMove(x,y){
+ let r=12;
+ return !wall(Math.floor((x-r)/TILE),Math.floor((y-r)/TILE))&&
+ !wall(Math.floor((x+r)/TILE),Math.floor((y-r)/TILE))&&
+ !wall(Math.floor((x-r)/TILE),Math.floor((y+r)/TILE))&&
+ !wall(Math.floor((x+r)/TILE),Math.floor((y+r)/TILE));
 }
 
-function drawMap(){
- ctx.fillStyle="#183d36";ctx.fillRect(0,0,W,H);
- // paths
- ctx.fillStyle="#55716a";
- ctx.fillRect(275,100,410,400);
- ctx.fillRect(150,200,660,200);
- rooms.forEach(drawRoom);
- // football pitch
- ctx.strokeStyle="#b7d7a0";ctx.lineWidth=3;
- ctx.strokeRect(705,75,180,105);
- ctx.beginPath();ctx.moveTo(795,75);ctx.lineTo(795,180);ctx.stroke();
- ctx.beginPath();ctx.arc(795,127,20,0,Math.PI*2);ctx.stroke();
- ctx.fillStyle="#f3d51b";ctx.font="bold 13px Arial";
- ctx.fillText("🇧🇷 BRAZIL ARENA",710,195);
- // task markers
- tasks.forEach(t=>{
-  if(!t.done){ctx.fillStyle="#ffdf32";ctx.beginPath();ctx.arc(t.x,t.y,11,0,7);ctx.fill();ctx.fillStyle="#17231b";ctx.font="bold 13px Arial";ctx.fillText("!",t.x-3,t.y+5)}
- });
+function move(p,dx,dy,dt){
+ let speed=p.isMe?175:hard?110:85;
+ let nx=p.x+dx*speed*dt;
+ let ny=p.y+dy*speed*dt;
+ if(canMove(nx,p.y))p.x=nx;
+ if(canMove(p.x,ny))p.y=ny;
 }
 
-function drawPlayer(p){
- if(!p.alive)return;
- ctx.save();ctx.translate(p.x,p.y);
- // shadow
- ctx.fillStyle="#0005";ctx.beginPath();ctx.ellipse(0,15,17,7,0,0,7);ctx.fill();
- // body
- ctx.fillStyle=p.color;ctx.beginPath();ctx.roundRect(-13,-16,26,31,10);ctx.fill();
- // visor
- ctx.fillStyle="#a8e7ef";ctx.beginPath();ctx.roundRect(-10,-12,21,11,6);ctx.fill();
- ctx.strokeStyle="#ffffff88";ctx.stroke();
- ctx.fillStyle="#fff";ctx.font="bold 10px Arial";ctx.textAlign="center";
- ctx.fillText(p.name.split(" ")[0],0,29);
- if(p===me){
-  ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,20,0,7);ctx.stroke();
- }
- ctx.restore();
-}
-
-function drawBody(b){
- ctx.save();ctx.translate(b.x,b.y);
- ctx.fillStyle="#a51f32";ctx.beginPath();ctx.ellipse(0,0,18,10,0,0,7);ctx.fill();
- ctx.fillStyle="#f4f1e5";ctx.beginPath();ctx.arc(0,-4,7,0,7);ctx.fill();
- ctx.fillStyle="#ffdf36";ctx.font="bold 17px Arial";ctx.fillText("!",-3,-15);
- ctx.restore();
-}
-
-function drawBall(){
- if(!ball)return;
- ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(ball.x,ball.y,10,0,7);ctx.fill();
- ctx.strokeStyle="#111";ctx.lineWidth=2;ctx.stroke();
- ctx.beginPath();ctx.moveTo(ball.x-7,ball.y);ctx.lineTo(ball.x+7,ball.y);ctx.moveTo(ball.x,ball.y-7);ctx.lineTo(ball.x,ball.y+7);ctx.stroke();
-}
-
-function draw(){
- drawMap();
- bodies.forEach(drawBody);
- players.forEach(drawPlayer);
- drawBall();
- particles.forEach(p=>{ctx.globalAlpha=Math.max(0,p.life/30);ctx.fillStyle=p.color;ctx.fillRect(p.x,p.y,5,5);ctx.globalAlpha=1});
- if(meeting){ctx.fillStyle="#0008";ctx.fillRect(0,0,W,H);ctx.fillStyle="#fff";ctx.font="bold 32px Arial";ctx.textAlign="center";ctx.fillText("EMERGENCY MEETING!",W/2,H/2)}
-}
-
-function movePlayer(p,dx,dy,dt){
- let speed=p===me?190:hard?110:85;
- let nx=p.x+dx*speed*dt,ny=p.y+dy*speed*dt;
- nx=Math.max(20,Math.min(W-20,nx));ny=Math.max(25,Math.min(H-20,ny));
- p.x=nx;p.y=ny;
-}
+function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
 
 function updateAI(dt){
  players.slice(1).forEach(p=>{
   if(!p.alive)return;
   p.think-=dt;
   if(p.think<=0){
-   p.think=random(.7,2);
-   p.angle=random(0,Math.PI*2);
+   p.think= Math.random()*1.5+.5;
+   let angle=Math.random()*Math.PI*2;
+   p.angle=angle;
    if(p.isImpostor&&!impostor){
-    let target=players.filter(q=>q!==p&&q.alive&&q!==me);
-    if(target.length&&Math.random()<.4){
-     const t=target[Math.floor(Math.random()*target.length)];
-     p.angle=Math.atan2(t.y-p.y,t.x-p.x);
-    }
+    let target=players.filter(q=>q.alive&&q!==p)
+      .sort((a,b)=>distance(a,p)-distance(b,p))[0];
+    if(target&&distance(p,target)<160)p.angle=Math.atan2(target.y-p.y,target.x-p.x);
    }
   }
-  let dx=Math.cos(p.angle),dy=Math.sin(p.angle);
-  // AI impostor may eliminate a nearby player
+  move(p,Math.cos(p.angle),Math.sin(p.angle),dt);
+
+  // AI impostors can eliminate nearby players
   if(p.isImpostor&&!impostor){
-   const target=players.find(q=>q===me&&q.alive&&dist(p,q)<42);
-   if(target&&Math.random()<(hard?.014:.006)){
-    eliminate(target,p);
-   }
+   let target=players.find(q=>q===me&&q.alive&&distance(p,q)<35);
+   if(target&&Math.random()<(hard?.025:.01))eliminate(target,p);
   }
-  movePlayer(p,dx,dy,dt);
  });
 }
 
-function loop(now){
- if(!game)return;
- let dt=Math.min((now-lastTime)/1000,.04);lastTime=now;
- if(!meeting&&!paused){
-  let dx=0,dy=0;
-  if(keys.ArrowLeft||keys.a||keys.A)dx--;
-  if(keys.ArrowRight||keys.d||keys.D)dx++;
-  if(keys.ArrowUp||keys.w||keys.W)dy--;
-  if(keys.ArrowDown||keys.s||keys.S)dy++;
-  if(dx||dy){let len=Math.hypot(dx,dy);movePlayer(me,dx/len,dy/len,dt)}
-  updateAI(dt);
-  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--});
-  particles=particles.filter(p=>p.life>0);
-  if(ball){ball.x+=ball.vx;ball.y+=ball.vy;ball.life--;if(ball.life<=0)ball=null}
-  if(toastTimer>0)toastTimer--;
-  checkWin();
+function drawMap(){
+ let sx=camera.x,sy=camera.y;
+ ctx.fillStyle="#142b2b";ctx.fillRect(0,0,900,560);
+
+ let left=Math.max(0,Math.floor(sx/TILE)-1);
+ let right=Math.min(COLS,Math.ceil((sx+900)/TILE)+1);
+ let top=Math.max(0,Math.floor(sy/TILE)-1);
+ let bottom=Math.min(ROWS,Math.ceil((sy+560)/TILE)+1);
+
+ for(let y=top;y<bottom;y++){
+  for(let x=left;x<right;x++){
+   let px=x*TILE-sx,py=y*TILE-sy;
+   if(map[y][x]){
+    ctx.fillStyle="#38535b";ctx.fillRect(px,py,TILE,TILE);
+    ctx.fillStyle="#52727a";ctx.fillRect(px+2,py+2,TILE-4,TILE-4);
+   }else{
+    ctx.fillStyle=(x+y)%2?"#24443e":"#284a43";
+    ctx.fillRect(px,py,TILE,TILE);
+    ctx.strokeStyle="#ffffff09";ctx.strokeRect(px,py,TILE,TILE);
+   }
+  }
  }
- draw();
- if(game)requestAnimationFrame(loop);
+
+ // Room labels
+ ctx.font="bold 15px Arial";
+ ctx.fillStyle="#ffffff77";
+ [["LOCKER ROOM",2,2],["CONTROL ROOM",11,2],
+  ["STADIUM",19,2],["CAFETERIA",2,14],
+  ["TRAINING",11,14],["POWER ROOM",19,14]
+ ].forEach(a=>{
+  ctx.fillText(a[0],a[1]*TILE-sx,a[2]*TILE-sy);
+ });
+
+ tasks.forEach(t=>{
+  if(t.done)return;
+  let x=t.x-sx,y=t.y-sy;
+  ctx.fillStyle="#f6d52b";
+  ctx.beginPath();ctx.arc(x,y,10,0,7);ctx.fill();
+  ctx.fillStyle="#17251b";ctx.font="bold 14px Arial";
+  ctx.fillText("!",x-3,y+5);
+ });
 }
 
-window.addEventListener("keydown",e=>{
- if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();
- keys[e.key]=true;
- if(!game||meeting)return;
- if(e.key.toLowerCase()==="e")tryTask();
- if(e.key.toLowerCase()==="r")reportBody();
- if(e.key===" "&&impostor)kickBall();
- if(e.key.toLowerCase()==="q"&&!emergencyUsed)callMeeting();
-});
-window.addEventListener("keyup",e=>keys[e.key]=false);
+function drawPlayer(p){
+ if(!p.alive)return;
+ let x=p.x-camera.x,y=p.y-camera.y;
+ ctx.save();ctx.translate(x,y);
+ ctx.fillStyle="#0007";ctx.beginPath();ctx.ellipse(0,13,15,6,0,0,7);ctx.fill();
+ ctx.fillStyle=p.color;ctx.beginPath();ctx.roundRect(-12,-15,24,29,9);ctx.fill();
+ ctx.fillStyle="#a9e7f1";ctx.beginPath();ctx.roundRect(-9,-11,19,10,5);ctx.fill();
+ ctx.fillStyle="white";ctx.font="10px Arial";ctx.textAlign="center";
+ ctx.fillText(p.name.split(" ")[0],0,26);
+ if(p===me){ctx.strokeStyle="#fff";ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,18,0,7);ctx.stroke()}
+ ctx.restore();
+}
+
+function draw(){
+ camera.x=Math.max(0,Math.min(MAPW-900,me.x-450));
+ camera.y=Math.max(0,Math.min(MAPH-560,me.y-280));
+
+ drawMap();
+
+ // Bodies and players are only visible within your vision
+ bodies.forEach(b=>{
+  if(distance(me,b)<VIEW){
+   ctx.fillStyle="#d72b38";
+   ctx.beginPath();ctx.arc(b.x-camera.x,b.y-camera.y,12,0,7);ctx.fill();
+   ctx.fillStyle="white";ctx.fillText("!",b.x-camera.x-3,b.y-camera.y+4);
+  }
+ });
+
+ players.forEach(p=>{
+  if(p===me||distance(me,p)<VIEW)drawPlayer(p);
+ });
+
+ if(ball){
+  ctx.fillStyle="white";ctx.beginPath();
+  ctx.arc(ball.x-camera.x,ball.y-camera.y,10,0,7);ctx.fill();
+  ctx.strokeStyle="black";ctx.stroke();
+ }
+
+ particles.forEach(p=>{
+  ctx.fillStyle=p.color;
+  ctx.fillRect(p.x-camera.x,p.y-camera.y,5,5);
+ });
+
+ // Darkness mask: see around your character, not the whole map
+ let x=me.x-camera.x,y=me.y-camera.y;
+ ctx.save();
+ ctx.fillStyle="#02070bdc";
+ ctx.fillRect(0,0,900,560);
+ ctx.globalCompositeOperation="destination-out";
+ let g=ctx.createRadialGradient(x,y,45,x,y,VIEW);
+ g.addColorStop(0,"rgba(0,0,0,1)");
+ g.addColorStop(.7,"rgba(0,0,0,.85)");
+ g.addColorStop(1,"rgba(0,0,0,0)");
+ ctx.fillStyle=g;
+ ctx.beginPath();ctx.arc(x,y,VIEW,0,7);ctx.fill();
+ ctx.restore();
+
+ // Character remains visible
+ drawPlayer(me);
+}
 
 function tryTask(){
- if(impostor){say("You are the impostor! Fake your tasks.");return}
- let t=tasks.find(t=>!t.done&&Math.hypot(me.x-t.x,me.y-t.y)<55);
- if(!t){say("Get closer to a yellow task marker!");return}
- activeTask=tasks.indexOf(t);
+ if(impostor){say("Fake doing tasks! Don't get caught.");return}
+ let t=tasks.find(t=>!t.done&&distance(me,t)<55);
+ if(!t){say("Find a yellow task marker and get closer!");return}
+ activeTask=t;
  $("taskTitle").textContent="📋 "+t.name;
- $("taskDescription").textContent="You've reached the task station. Complete this task to help Brazil!";
- show("taskBox");
+ $("taskDescription").textContent="Complete this task to help the crew!";
+ openBox("taskBox");
 }
 
 function finishTask(){
- if(activeTask<0)return;
- tasks[activeTask].done=true;completed++;activeTask=-1;
- hideOverlay();say("Task completed! Boa! 🇧🇷");updateHUD();
- // AI crew also make progress
- players.filter(p=>!p.isMe&&!p.isImpostor&&p.alive).forEach(p=>{if(Math.random()<.5)completed=Math.min(totalTasks,completed+1)});
+ if(!activeTask)return;
+ activeTask.done=true;activeTask=null;
+ completed++;
+ // AI crewmates sometimes finish tasks too
+ players.filter(p=>!p.isMe&&!p.isImpostor&&p.alive)
+  .forEach(p=>{if(Math.random()<.35)completed=Math.min(5,completed+1)});
+ $("overlay").classList.add("hidden");
+ say("Task completed! Boa! 🇧🇷");
  updateHUD();checkWin();
 }
-function closeTask(){activeTask=-1;hideOverlay()}
+function closeTask(){activeTask=null;$("overlay").classList.add("hidden")}
 
 function kickBall(){
  if(!game||!impostor||!me.alive)return;
- let target=players.filter(p=>p!==me&&p.alive&&dist(p,me)<125).sort((a,b)=>dist(a,me)-dist(b,me))[0];
- if(!target){say("Get closer to a player to kick the ball!");return}
- ball={x:me.x,y:me.y,vx:(target.x-me.x)*.15,vy:(target.y-me.y)*.15,life:20};
- for(let i=0;i<18;i++)particles.push({x:target.x,y:target.y,vx:random(-4,4),vy:random(-4,4),life:30,color:["#f5d52b","#fff","#16b84e"][i%3]});
+ if(cooldown>0){say("⚽ Wait "+Math.ceil(cooldown)+" seconds!");return}
+ let target=players.filter(p=>p!==me&&p.alive&&distance(me,p)<125)
+  .sort((a,b)=>distance(me,a)-distance(me,b))[0];
+ if(!target){say("Get closer to a player first!");return}
+ ball={x:me.x,y:me.y,life:22};
+ for(let i=0;i<25;i++)particles.push({
+  x:target.x,y:target.y,vx:(Math.random()-.5)*8,
+  vy:(Math.random()-.5)*8,life:30,
+  color:["#f5d52b","white","#16b84e"][i%3]
+ });
  eliminate(target,me);
- say("⚽ GOOOOOAL! You kicked the ball!");
+ cooldown=20;
+ say("⚽ GOOOOAL! You kicked "+target.name+"!");
+ updateHUD();
 }
 
 function eliminate(target,attacker){
  if(!target||!target.alive)return;
  target.alive=false;
- if(attacker===me){kills++;updateHUD()}
  bodies.push({x:target.x,y:target.y});
+ if(attacker===me)kills++;
  updateHUD();
- if(target===me){endGame(false,"You were eliminated! The Brazilian crew must finish the tasks or find the impostor.");}
+ if(target===me)endGame(false,"You were eliminated! Brazil needs you!");
 }
 
 function reportBody(){
- if(!bodies.length){say("There are no bodies to report!");return}
- if(!bodies.some(b=>dist(me,b)<65)){say("Move closer to a body to report it!");return}
- bodies=[];startMeeting("🚨 BODY REPORTED!","A player has found a body. Who looks suspicious?");
+ let b=bodies.find(b=>distance(me,b)<65);
+ if(!b){say("Get closer to a body to report it!");return}
+ bodies=[];
+ startMeeting("🚨 BODY REPORTED!","Who do you think did it?");
 }
+
 function callMeeting(){
  if(emergencyUsed){say("You've already used your emergency meeting!");return}
- emergencyUsed=true;startMeeting("🚨 EMERGENCY MEETING!","Someone called an emergency meeting!");
+ emergencyUsed=true;
+ startMeeting("🚨 EMERGENCY MEETING!","Someone called a meeting. Who is suspicious?");
 }
 
 function startMeeting(title,description){
  meeting=true;
  $("meetingTitle").textContent=title;
  $("meetingText").textContent=description;
- const choices=$("meetingChoices");choices.innerHTML="";
+ $("votes").innerHTML="";
  players.filter(p=>p.alive).forEach(p=>{
   let b=document.createElement("button");
   b.textContent=p.name+(p===me?" (YOU)":"");
   b.onclick=()=>vote(p);
-  choices.appendChild(b);
+  $("votes").appendChild(b);
  });
- let skip=document.createElement("button");skip.textContent="SKIP VOTE";skip.onclick=()=>vote(null);choices.appendChild(skip);
- show("meeting");
+ let skip=document.createElement("button");
+ skip.textContent="SKIP";
+ skip.onclick=()=>vote(null);
+ $("votes").appendChild(skip);
+ openBox("meeting");
 }
 
 function vote(choice){
- meeting=false;hideOverlay();
- // Player vote plus AI votes. AI votes have a chance of targeting the actual impostor.
+ meeting=false;
+ $("overlay").classList.add("hidden");
  let votes={};
  players.filter(p=>p.alive).forEach(p=>votes[p.id]=0);
  if(choice)votes[choice.id]++;
- for(let p of players.filter(p=>p.alive&&!p.isMe)){
+ players.filter(p=>p.alive&&!p.isMe).forEach(p=>{
   let target;
-  if(Math.random()<(hard?.65:.35))target=players.find(q=>q.alive&&q.isImpostor);
-  else target=players.filter(q=>q.alive&&q!==p)[Math.floor(Math.random()*Math.max(1,players.filter(q=>q.alive&&q!==p).length))];
+  if(Math.random()<(hard?.65:.35))
+   target=players.find(q=>q.alive&&q.isImpostor);
+  else{
+   let possible=players.filter(q=>q.alive&&q!==p);
+   target=possible[Math.floor(Math.random()*possible.length)];
+  }
   if(target)votes[target.id]++;
- }
- let max=Math.max(0,...Object.values(votes));
+ });
+ let max=Math.max(...Object.values(votes));
  let leaders=Object.keys(votes).filter(id=>votes[id]===max);
  let ejected=leaders.length===1?players.find(p=>p.id===Number(leaders[0])):null;
  if(ejected){
   ejected.alive=false;
-  say(ejected.isImpostor?"Correct! The impostor was caught! 🎉":"Oh no! You voted out an innocent player!");
- }else say("The vote was tied. Nobody was ejected.");
- updateHUD();
- if(ejected&&ejected.isImpostor){endGame(!impostor,"The impostor was voted out! Brazil is safe! 🇧🇷");return}
- checkWin();
+  say(ejected.isImpostor?"THE IMPOSTOR WAS CAUGHT! 🇧🇷":"Wrong person! An innocent player was ejected.");
+  if(ejected.isImpostor){endGame(!impostor,"The impostor was voted out!");return}
+ }else say("It was a tie. Nobody was ejected.");
+ updateHUD();checkWin();
 }
 
 function checkWin(){
@@ -394,9 +433,9 @@ function checkWin(){
  let alive=players.filter(p=>p.alive);
  let imp=alive.filter(p=>p.isImpostor);
  let crew=alive.filter(p=>!p.isImpostor);
- if(imp.length===0){endGame(!impostor,"All impostors have been eliminated! The crew wins!");return}
+ if(imp.length===0){endGame(!impostor,"All impostors have been found!");return}
  if(imp.length>=crew.length){endGame(impostor,"The impostor has taken over Brazil!");return}
- if(!impostor&&completed>=totalTasks){endGame(true,"All tasks completed! Brazil wins! 🇧🇷");return}
+ if(!impostor&&completed>=5){endGame(true,"All tasks completed! Brazil wins!");}
 }
 
 function endGame(won,text){
@@ -404,10 +443,52 @@ function endGame(won,text){
  game=false;meeting=false;
  $("endTitle").textContent=won?"🏆 VITÓRIA!":"💀 GAME OVER";
  $("endText").textContent=text;
- show("endBox");
+ openBox("ending");
 }
 
-drawMap();
+function openBox(id){
+ $("overlay").classList.remove("hidden");
+ ["start","meeting","taskBox","ending"].forEach(x=>$(x).classList.add("hidden"));
+ $(id).classList.remove("hidden");
+}
+
+function loop(now){
+ if(!game)return;
+ let dt=Math.min((now-lastTime)/1000,.04);
+ lastTime=now;
+
+ if(!meeting){
+  let dx=0,dy=0;
+  if(keys.ArrowLeft||keys.a||keys.A)dx--;
+  if(keys.ArrowRight||keys.d||keys.D)dx++;
+  if(keys.ArrowUp||keys.w||keys.W)dy--;
+  if(keys.ArrowDown||keys.s||keys.S)dy++;
+  if(dx||dy){let len=Math.hypot(dx,dy);move(me,dx/len,dy/len,dt)}
+  updateAI(dt);
+  cooldown=Math.max(0,cooldown-dt);
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--});
+  particles=particles.filter(p=>p.life>0);
+  updateHUD();
+  checkWin();
+ }
+ draw();
+ if(game)requestAnimationFrame(loop);
+}
+
+window.addEventListener("keydown",e=>{
+ keys[e.key]=true;
+ if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "].includes(e.key))e.preventDefault();
+ if(!game||meeting)return;
+ if(e.key.toLowerCase()==="e")tryTask();
+ if(e.key.toLowerCase()==="r")reportBody();
+ if(e.key.toLowerCase()==="q")callMeeting();
+ if(e.code==="Space"&&impostor)kickBall();
+});
+window.addEventListener("keyup",e=>keys[e.key]=false);
+
+buildMap();
+draw();
 </script>
 </body>
 </html>
+```
